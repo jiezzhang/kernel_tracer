@@ -43,26 +43,18 @@ static std::string getResult(pi_result Res) {
 
 void KernelCollector::setupPiHandler() {
   // Register kernels
-  argBeginHandler.set_piKernelCreate(
-      [&](const pi_plugin &, std::optional<pi_result>, pi_program program,
+  argEndHandler.set_piKernelCreate(
+      [&](const pi_plugin &, std::optional<pi_result> Res, pi_program program,
           const char *kernel_name, pi_kernel *ret_kernel) {
         auto demangleName = demangleKernelName(std::string(kernel_name));
         auto kernelRef = reinterpret_cast<uintptr_t>(*ret_kernel);
         kernelMap.emplace(kernelRef, Kernel(demangleName, kernelRef, 0));
 
-        std::cout << ">>>>> Create kernel: " << demangleName << " " << std::hex
-                  << kernelRef << std::endl;
+        std::cout << ">>>>> Create kernel: " << demangleName << std::endl;
+        std::cout << "<<<<< Creating finish with " << getResult(Res.value())
+                  << std::endl;
+
       });
-  argEndHandler.set_piKernelCreate([&](const pi_plugin &,
-                                       std::optional<pi_result> Res, pi_program,
-                                       const char *, pi_kernel *) {
-    if (Res) {
-      std::cout << "<<<<< Creation finish with " << getResult(Res.value())
-                << std::endl;
-    } else {
-      std::cout << "<<<<< Creation finish without pi_result" << std::endl;
-    }
-  });
   // Associate kernels with events and queue
   argBeginHandler.set_piEnqueueKernelLaunch(
       [&](const pi_plugin &, std::optional<pi_result>, pi_queue Queue,
@@ -70,7 +62,6 @@ void KernelCollector::setupPiHandler() {
           const size_t *, pi_uint32, const pi_event *, pi_event *OutEvent) {
         auto kernelRef = reinterpret_cast<uintptr_t>(Kernel);
         auto eventRef = reinterpret_cast<uintptr_t>(*OutEvent);
-        std::cout << std::hex << kernelRef << std::endl;
         kernelMap.at(kernelRef).eventRef = eventRef;
         std::cout << ">>>>> Launch kernel: " << kernelMap.at(kernelRef).name
                   << std::endl;
@@ -79,12 +70,8 @@ void KernelCollector::setupPiHandler() {
       [&](const pi_plugin &, std::optional<pi_result> Res, pi_queue, pi_kernel,
           pi_uint32, const size_t *, const size_t *, const size_t *, pi_uint32,
           const pi_event *, pi_event *) {
-        if (Res) {
-          std::cout << "<<<<< Launching finish with " << getResult(Res.value())
-                    << std::endl;
-        } else {
-          std::cout << "<<<<< Launching finish without pi_result" << std::endl;
-        }
+        std::cout << "<<<<< Launching finish with " << getResult(Res.value())
+                  << std::endl;
       });
 
   // TODO: query pi_event.CleanedUp or pi_event.Completed
@@ -98,6 +85,6 @@ void KernelCollector::handlePiBegin(const pi_plugin &Plugin,
 
 void KernelCollector::handlePiEnd(const pi_plugin &Plugin,
                                   const xpti::function_with_args_t *Data) {
-  argEndHandler.handle(Data->function_id, Plugin, std::nullopt,
-                       Data->args_data);
+  auto Res = *static_cast<pi_result *>(Data->ret_data);
+  argEndHandler.handle(Data->function_id, Plugin, Res, Data->args_data);
 }
