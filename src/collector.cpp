@@ -41,12 +41,11 @@ XPTI_CALLBACK_API void piCallback(uint16_t TraceType,
   auto *Payload = xptiQueryPayloadByUID(xptiGetUniversalId());
 
   const auto *Data = static_cast<const xpti::function_with_args_t *>(UserData);
+  const auto *Plugin = static_cast<pi_plugin *>(Data->user_data);
   if (TraceType == xpti::trace_function_with_args_begin) {
     std::lock_guard<std::mutex> Lock(GMutex);
-    const auto *Plugin = static_cast<pi_plugin *>(Data->user_data);
     collector.handlePiBegin(*Plugin, Data);
   } else if (TraceType == xpti::trace_function_with_args_end) {
-    const auto *Plugin = static_cast<pi_result *>(Data->ret_data);
-    collector.handlePiEnd(*static_cast<pi_result *>(Data->ret_data));
+    collector.handlePiEnd(*Plugin, Data);
   }
 }

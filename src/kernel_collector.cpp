@@ -43,48 +43,61 @@ static std::string getResult(pi_result Res) {
 
 void KernelCollector::setupPiHandler() {
   // Register kernels
-  argHandler.set_piKernelCreate([&](const pi_plugin &, std::optional<pi_result>,
-                                    pi_program program, const char *kernel_name,
-                                    pi_kernel *ret_kernel) {
-    auto demangleName = demangleKernelName(std::string(kernel_name));
-    auto kernelRef = reinterpret_cast<uintptr_t>(*ret_kernel);
-    kernelMap.emplace(kernelRef, Kernel(demangleName, kernelRef, 0));
+  argBeginHandler.set_piKernelCreate(
+      [&](const pi_plugin &, std::optional<pi_result>, pi_program program,
+          const char *kernel_name, pi_kernel *ret_kernel) {
+        auto demangleName = demangleKernelName(std::string(kernel_name));
+        auto kernelRef = reinterpret_cast<uintptr_t>(*ret_kernel);
+        kernelMap.emplace(kernelRef, Kernel(demangleName, kernelRef, 0));
 
-    std::cout << ">>>>> Create kernel: " << demangleName << std::endl;
+        std::cout << ">>>>> Create kernel: " << demangleName << " " << std::hex
+                  << kernelRef << std::endl;
+      });
+  argEndHandler.set_piKernelCreate([&](const pi_plugin &,
+                                       std::optional<pi_result> Res, pi_program,
+                                       const char *, pi_kernel *) {
+    if (Res) {
+      std::cout << "<<<<< Creation finish with " << getResult(Res.value())
+                << std::endl;
+    } else {
+      std::cout << "<<<<< Creation finish without pi_result" << std::endl;
+    }
   });
   // Associate kernels with events and queue
-  argHandler.set_piEnqueueKernelLaunch(
+  argBeginHandler.set_piEnqueueKernelLaunch(
       [&](const pi_plugin &, std::optional<pi_result>, pi_queue Queue,
           pi_kernel Kernel, pi_uint32, const size_t *, const size_t *,
           const size_t *, pi_uint32, const pi_event *, pi_event *OutEvent) {
         auto kernelRef = reinterpret_cast<uintptr_t>(Kernel);
         auto eventRef = reinterpret_cast<uintptr_t>(*OutEvent);
-
+        std::cout << std::hex << kernelRef << std::endl;
         kernelMap.at(kernelRef).eventRef = eventRef;
         std::cout << ">>>>> Launch kernel: " << kernelMap.at(kernelRef).name
                   << std::endl;
       });
-  /*
-    // How many events will be executed?
-    // Or query pi_event.CleanedUp or pi_event.Completed
-    argHandler.set_piEventsWait([&](const pi_plugin &, std::optional<pi_result>,
-                                    pi_uint32 num_events,
-                                    const pi_event *event_list) {
+  argEndHandler.set_piEnqueueKernelLaunch(
+      [&](const pi_plugin &, std::optional<pi_result> Res, pi_queue, pi_kernel,
+          pi_uint32, const size_t *, const size_t *, const size_t *, pi_uint32,
+          const pi_event *, pi_event *) {
+        if (Res) {
+          std::cout << "<<<<< Launching finish with " << getResult(Res.value())
+                    << std::endl;
+        } else {
+          std::cout << "<<<<< Launching finish without pi_result" << std::endl;
+        }
+      });
 
-    });
-    // Clear all kernels associate with this queue
-    argHandler.set_piQueueFinish(
-        [&](const pi_plugin &, std::optional<pi_result>, pi_queue Queue) {
-
-        });
-  */
+  // TODO: query pi_event.CleanedUp or pi_event.Completed
 }
 
 void KernelCollector::handlePiBegin(const pi_plugin &Plugin,
                                     const xpti::function_with_args_t *Data) {
-  argHandler.handle(Data->function_id, Plugin, std::nullopt, Data->args_data);
+  argBeginHandler.handle(Data->function_id, Plugin, std::nullopt,
+                         Data->args_data);
 }
 
-void KernelCollector::handlePiEnd(pi_result Res) {
-  std::cout << "<<<<< Finish with " << getResult(Res) << std::endl;
+void KernelCollector::handlePiEnd(const pi_plugin &Plugin,
+                                  const xpti::function_with_args_t *Data) {
+  argEndHandler.handle(Data->function_id, Plugin, std::nullopt,
+                       Data->args_data);
 }

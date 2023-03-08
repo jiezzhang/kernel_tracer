@@ -22,9 +22,12 @@ public:
   void setupPiHandler();
   void handlePiBegin(const pi_plugin &Plugin,
                      const xpti::function_with_args_t *Data);
-  void handlePiEnd(pi_result Res);
+  void handlePiEnd(const pi_plugin &Plugin,
+                   const xpti::function_with_args_t *Data);
 
 private:
-  sycl::xpti_helpers::PiArgumentsHandler argHandler;
+  sycl::xpti_helpers::PiArgumentsHandler argBeginHandler;
+  sycl::xpti_helpers::PiArgumentsHandler argEndHandler;
+
   std::unordered_map<kernelptr_t, Kernel> kernelMap;
 };
