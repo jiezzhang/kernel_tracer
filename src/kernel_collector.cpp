@@ -53,7 +53,21 @@ void KernelCollector::setupPiHandler() {
         std::cout << ">>>>> Create kernel: " << demangleName << std::endl;
         std::cout << "<<<<< Creating finish with " << getResult(Res.value())
                   << std::endl;
+      });
+  // Register interop kernels
+  argEndHandler.set_piextKernelCreateWithNativeHandle(
+      [&](const pi_plugin &, std::optional<pi_result> Res,
+          pi_native_handle NativeHandle, pi_context Context, pi_program Program,
+          bool OwnNativeHandle, pi_kernel *ret_kernel) {
+        auto kernelRef = reinterpret_cast<uintptr_t>(*ret_kernel);
+        // TODO: use hex string?
+        std::string name =
+            "unknown interop kernel " + std::to_string(kernelRef);
+        kernelMap.emplace(kernelRef, Kernel(name, kernelRef, 0));
 
+        std::cout << ">>>>> Create kernel: " << name << std::endl;
+        std::cout << "<<<<< Creating finish with " << getResult(Res.value())
+                  << std::endl;
       });
   // Associate kernels with events and queue
   argBeginHandler.set_piEnqueueKernelLaunch(
@@ -62,18 +76,23 @@ void KernelCollector::setupPiHandler() {
           const size_t *, pi_uint32, const pi_event *, pi_event *OutEvent) {
         auto kernelRef = reinterpret_cast<uintptr_t>(Kernel);
         auto eventRef = reinterpret_cast<uintptr_t>(*OutEvent);
-        kernelMap.at(kernelRef).eventRef = eventRef;
-        std::cout << ">>>>> Launch kernel: " << kernelMap.at(kernelRef).name
-                  << std::endl;
+        if (kernelMap.find(kernelRef) != kernelMap.end()) {
+          kernelMap.at(kernelRef).eventRef = eventRef;
+          std::cout << ">>>>> Launch kernel: " << kernelMap.at(kernelRef).name
+                    << std::endl;
+        } else
+          std::cout << ">>>>> Launch unknown kernel\n";
       });
   argEndHandler.set_piEnqueueKernelLaunch(
       [&](const pi_plugin &, std::optional<pi_result> Res, pi_queue,
           pi_kernel Kernel, pi_uint32, const size_t *, const size_t *,
           const size_t *, pi_uint32, const pi_event *, pi_event *) {
         auto kernelRef = reinterpret_cast<uintptr_t>(Kernel);
-        kernelMap.at(kernelRef).launched = true;
-        std::cout << "<<<<< Launching finish with " << getResult(Res.value())
-                  << std::endl;
+        if (kernelMap.find(kernelRef) != kernelMap.end()) {
+          kernelMap.at(kernelRef).launched = true;
+          std::cout << "<<<<< Launching finish with " << getResult(Res.value())
+                    << std::endl;
+        }
       });
 
   // TODO: query pi_event.CleanedUp or pi_event.Completed
