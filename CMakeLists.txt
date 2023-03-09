@@ -5,7 +5,7 @@ find_program(DPCPP_CXX_EXECUTABLE NAMES icpx clang++ dpcpp
     PATH_SUFFIXES bin)
 message(${DPCPP_CXX_EXECUTABLE})
 set(CMAKE_CXX_COMPILER ${DPCPP_CXX_EXECUTABLE})
-set(CMAKE_CXX_FLAGS "-fsycl")
+set(CMAKE_CXX_FLAGS "-fsycl -Wno-deprecated-declarations")
 project(kernel_collector LANGUAGES CXX)
 
 

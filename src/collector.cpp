@@ -8,7 +8,7 @@
 #include <string_view>
 
 std::mutex GMutex;
-KernelCollector collector;
+KernelCollector *collector = nullptr;
 
 XPTI_CALLBACK_API void piCallback(uint16_t, xpti::trace_event_data_t *,
                                   xpti::trace_event_data_t *,
@@ -20,7 +20,8 @@ void xptiTraceInit(unsigned int MajorVersion, unsigned int MinorVersion,
   std::string_view NameView{StreamName};
 
   if (NameView == "sycl.pi.debug") {
-    collector.setupPiHandler();
+    collector = new KernelCollector;
+    collector->setupPiHandler();
     uint8_t StreamID = xptiRegisterStream(StreamName);
     // Register PI and XPTI callbacks
     xptiRegisterCallback(StreamID, xpti::trace_function_with_args_begin,
@@ -30,7 +31,14 @@ void xptiTraceInit(unsigned int MajorVersion, unsigned int MinorVersion,
   }
 }
 
-XPTI_CALLBACK_API void xptiTraceFinish(const char *StreamName) {}
+XPTI_CALLBACK_API void xptiTraceFinish(const char *StreamName) {
+  std::string_view NameView{StreamName};
+
+  if (NameView == "sycl.pi.debug") {
+    collector->printKernel();
+    delete collector;
+  }
+}
 
 XPTI_CALLBACK_API void piCallback(uint16_t TraceType,
                                   xpti::trace_event_data_t *,
@@ -39,13 +47,12 @@ XPTI_CALLBACK_API void piCallback(uint16_t TraceType,
   // TODO: move mutex into global handler
 
   auto *Payload = xptiQueryPayloadByUID(xptiGetUniversalId());
-
+  std::lock_guard<std::mutex> Lock(GMutex);
   const auto *Data = static_cast<const xpti::function_with_args_t *>(UserData);
   const auto *Plugin = static_cast<pi_plugin *>(Data->user_data);
   if (TraceType == xpti::trace_function_with_args_begin) {
-    std::lock_guard<std::mutex> Lock(GMutex);
-    collector.handlePiBegin(*Plugin, Data);
+    collector->handlePiBegin(*Plugin, Data);
   } else if (TraceType == xpti::trace_function_with_args_end) {
-    collector.handlePiEnd(*Plugin, Data);
+    collector->handlePiEnd(*Plugin, Data);
   }
 }

@@ -14,6 +14,9 @@ struct Kernel {
   std::string name;
   uintptr_t kernelRef;
   uintptr_t eventRef;
+
+  bool launched = false;
+  bool finished = false;
 };
 
 class KernelCollector {
@@ -24,6 +27,8 @@ public:
                      const xpti::function_with_args_t *Data);
   void handlePiEnd(const pi_plugin &Plugin,
                    const xpti::function_with_args_t *Data);
+  void printKernel();
+  void clear();
 
 private:
   sycl::xpti_helpers::PiArgumentsHandler argBeginHandler;

@@ -67,9 +67,11 @@ void KernelCollector::setupPiHandler() {
                   << std::endl;
       });
   argEndHandler.set_piEnqueueKernelLaunch(
-      [&](const pi_plugin &, std::optional<pi_result> Res, pi_queue, pi_kernel,
-          pi_uint32, const size_t *, const size_t *, const size_t *, pi_uint32,
-          const pi_event *, pi_event *) {
+      [&](const pi_plugin &, std::optional<pi_result> Res, pi_queue,
+          pi_kernel Kernel, pi_uint32, const size_t *, const size_t *,
+          const size_t *, pi_uint32, const pi_event *, pi_event *) {
+        auto kernelRef = reinterpret_cast<uintptr_t>(Kernel);
+        kernelMap.at(kernelRef).launched = true;
         std::cout << "<<<<< Launching finish with " << getResult(Res.value())
                   << std::endl;
       });
@@ -88,3 +90,18 @@ void KernelCollector::handlePiEnd(const pi_plugin &Plugin,
   auto Res = *static_cast<pi_result *>(Data->ret_data);
   argEndHandler.handle(Data->function_id, Plugin, Res, Data->args_data);
 }
+
+void KernelCollector::printKernel() {
+  std::cout << "----------------------------------------------------------\n";
+  std::cout << "check launched kernels\n";
+  std::cout << "----------------------------------------------------------\n";
+  for (const auto &[p, k] : kernelMap) {
+    // Kernel k = pair.second;
+    if (k.launched)
+      std::cout << k.name << "    launched\n";
+    else
+      std::cout << k.name << "    not launched\n";
+  }
+}
+
+void KernelCollector::clear() {}
