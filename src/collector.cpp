@@ -44,25 +44,29 @@ XPTI_CALLBACK_API void urCallback(uint16_t TraceType,
   } else if (TraceType == xpti::trace_function_with_args_end) {
     switch (static_cast<ur_function_t>(Data->function_id)) {
     case UR_FUNCTION_KERNEL_CREATE:
-      G.handle_urKernelCreate(static_cast<ur_kernel_create_params_t *>(Data->args_data));
+      G.handle_urKernelCreate(
+          static_cast<ur_kernel_create_params_t *>(Data->args_data));
       return;
-    // ur_kernel_handle_t: ZeCache<std::string> ZeKernelName;
-    // case UR_FUNCTION_KERNEL_CREATE_WITH_NATIVE_HANDLE:
+      // ur_kernel_handle_t: ZeCache<std::string> ZeKernelName;
+      // case UR_FUNCTION_KERNEL_CREATE_WITH_NATIVE_HANDLE:
 
     case UR_FUNCTION_ENQUEUE_KERNEL_LAUNCH:
-      G.handle_urEnqueueKernelLaunch(static_cast<ur_enqueue_kernel_launch_params_t *>(Data->args_data));
+      G.handle_urEnqueueKernelLaunch(
+          static_cast<ur_enqueue_kernel_launch_params_t *>(Data->args_data));
       return;
     case UR_FUNCTION_EVENT_WAIT:
-      G.handle_urEventWait(static_cast<ur_event_wait_params_t *>(Data->args_data));
+      G.handle_urEventWait(
+          static_cast<ur_event_wait_params_t *>(Data->args_data));
       return;
     case UR_FUNCTION_QUEUE_FINISH:
-      G.handle_urQueueFinish(static_cast<ur_queue_finish_params_t *>(Data->args_data));
+      G.handle_urQueueFinish(
+          static_cast<ur_queue_finish_params_t *>(Data->args_data));
 
-    // case UR_FUNCTION_ENQUEUE_EVENTS_WAIT:
-    //   G.handle_urEnqueueEventsWait(static_cast<ur_enqueue_events_wait_params_t *>(Data->args_data));
-    //   return;
-    // case UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER:
-    // case UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER_EXT:
+      // case UR_FUNCTION_ENQUEUE_EVENTS_WAIT:
+      //   G.handle_urEnqueueEventsWait(static_cast<ur_enqueue_events_wait_params_t
+      //   *>(Data->args_data)); return;
+      // case UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER:
+      // case UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER_EXT:
 
     default:
       return;

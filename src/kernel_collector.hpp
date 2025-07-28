@@ -1,11 +1,11 @@
 #pragma once
 #include "xpti/xpti_trace_framework.h"
 
+#include <assert.h>
 #include <iostream>
 #include <string>
-#include <vector>
-#include <assert.h>
 #include <ur_api.h>
+#include <vector>
 
 using handler_t = uintptr_t;
 
@@ -25,9 +25,11 @@ public:
   KernelCollector() {}
 
   void handle_urKernelCreate(const ur_kernel_create_params_t *Params);
-  void handle_urEnqueueKernelLaunch(const ur_enqueue_kernel_launch_params_t *Params);
+  void
+  handle_urEnqueueKernelLaunch(const ur_enqueue_kernel_launch_params_t *Params);
   void handle_urEventWait(const ur_event_wait_params_t *Params);
-  void handle_urEnqueueEventsWait(const ur_enqueue_events_wait_params_t *Params);
+  void
+  handle_urEnqueueEventsWait(const ur_enqueue_events_wait_params_t *Params);
   void handle_urQueueFinish(const ur_queue_finish_params_t *Params);
 
   void printKernel();
@@ -51,7 +53,6 @@ public:
     assert(KernelCollectorPtr && "Instance must not be deallocated earlier");
     return *KernelCollectorPtr;
   }
-
 
 private:
   std::unordered_map<handler_t, Kernel> kernelMap;
