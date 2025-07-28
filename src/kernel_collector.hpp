@@ -1,12 +1,13 @@
 #pragma once
-#include "pi_arguments_handler.hpp"
 #include "xpti/xpti_trace_framework.h"
 
 #include <iostream>
 #include <string>
 #include <vector>
+#include <assert.h>
+#include <ur_api.h>
 
-using kernelptr_t = uintptr_t;
+using handler_t = uintptr_t;
 
 struct Kernel {
   Kernel(std::string name_, uintptr_t kernelRef_, uintptr_t eventRef_)
@@ -22,17 +23,37 @@ struct Kernel {
 class KernelCollector {
 public:
   KernelCollector() {}
-  void setupPiHandler();
-  void handlePiBegin(const pi_plugin &Plugin,
-                     const xpti::function_with_args_t *Data);
-  void handlePiEnd(const pi_plugin &Plugin,
-                   const xpti::function_with_args_t *Data);
+
+  void handle_urKernelCreate(const ur_kernel_create_params_t *Params);
+  void handle_urEnqueueKernelLaunch(const ur_enqueue_kernel_launch_params_t *Params);
+  void handle_urEventWait(const ur_event_wait_params_t *Params);
+  void handle_urEnqueueEventsWait(const ur_enqueue_events_wait_params_t *Params);
+  void handle_urQueueFinish(const ur_queue_finish_params_t *Params);
+
   void printKernel();
+  void kernelLaunch(Kernel &k) {
+    k.launched = true;
+    std::cout << k.name << " [launched]\n";
+  }
+  void kernelFinish(Kernel &k) {
+    k.finished = true;
+    std::cout << k.name << " [finished]\n";
+  }
+
   void clear();
 
-private:
-  sycl::xpti_helpers::PiArgumentsHandler argBeginHandler;
-  sycl::xpti_helpers::PiArgumentsHandler argEndHandler;
+  static KernelCollector *&getInstancePtr() {
+    static KernelCollector *KernelCollectorPtr = new KernelCollector();
+    return KernelCollectorPtr;
+  }
+  static KernelCollector &getInstance() {
+    KernelCollector *KernelCollectorPtr = KernelCollector::getInstancePtr();
+    assert(KernelCollectorPtr && "Instance must not be deallocated earlier");
+    return *KernelCollectorPtr;
+  }
 
-  std::unordered_map<kernelptr_t, Kernel> kernelMap;
+
+private:
+  std::unordered_map<handler_t, Kernel> kernelMap;
+  std::unordered_map<handler_t, std::vector<handler_t>> queueMap;
 };

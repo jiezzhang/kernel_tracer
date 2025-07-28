@@ -23,6 +23,7 @@ int main(int argc, char **argv, char *env[]) {
   NewEnv.push_back("XPTI_FRAMEWORK_DISPATCHER=libxptifw.so");
   NewEnv.push_back("XPTI_SUBSCRIBERS=libkernel_collector.so");
   NewEnv.push_back("XPTI_TRACE_ENABLE=1");
+  NewEnv.push_back("UR_ENABLE_LAYERS=UR_LAYER_TRACING");
 
   int Err = launch(Executable, Args, NewEnv);
 

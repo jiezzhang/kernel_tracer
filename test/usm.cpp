@@ -28,7 +28,7 @@ void IotaParallel(queue &q, int *a, size_t size, int value) {
   auto e = q.parallel_for(num_items, [=](auto i) { a[i] = value + i; });
   q.parallel_for<class aaa>(num_items, [=](auto i) { a[i] = value + i; });
   q.parallel_for<class bbb>(num_items, [=](auto i) { a[i] = value + i; });
-  e.wait();
+  q.wait();
 }
 
 int main() {
